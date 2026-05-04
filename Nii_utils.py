@@ -4,7 +4,6 @@ import random
 import numpy as np
 import SimpleITK as sitk
 from os.path import join
-from sklearn.metrics import f1_score
 
 
 # ---- Training
@@ -55,6 +54,8 @@ def Save_Parameter(opt):
     vars(opt)['device'] = str(vars(opt)['device'])
     with open(join(opt.save_dir, 'train_parameter.json'), 'w') as f:
         json.dump(vars(opt), f, indent=4)
+
+
 
 
 # ---- Data
@@ -113,40 +114,6 @@ def NiiDataWrite(save_path, volumn, spacing=np.array([1,1,1]), origin=(0, 0, 0),
     sitk.WriteImage(raw, save_path)
 
 
-def harmonize_mr(X, min=0, max=255):
-    """
-    Clip MR image values to [min, max] and normalize them to [-1, 1].
-
-    Args:
-        X (ndarray): Input image.
-        min (float): Minimum intensity to clip.
-        max (float): Maximum intensity to clip.
-
-    Returns:
-        Normalized image with values in [-1, 1].
-    """
-    X = np.clip(X, min, max)
-    X = X / abs(max-min) * 2 - 1
-    return X
-
-
-def harmonize_mr_reverse(X, min=0, max=255):
-    """
-    Renormalize MR image [-1, 1] to form them to [min, max] and Clip.
-
-    Args:
-        X (ndarray): Input image.
-        min (float): Minimum intensity to clip.
-        max (float): Maximum intensity to clip.
-
-    Returns:
-        ReNormalized image with values in [min, max].
-    """
-    X = (X + 1) * abs(max-min) / 2
-    X = np.clip(X, min, max)
-    return X
-
-
 
 # ---- Metrics
 
@@ -170,24 +137,6 @@ def compute_mae(pred, label, mask=None):
     return mae
 
 
-def dice_coefficient(prediction, target):
-    """
-    Compute Dice coefficient (F1 score) between binary predictions and targets.
-
-    Args:
-        prediction (ndarray or tensor): Binary predicted mask.
-        target (ndarray or tensor): Binary ground-truth mask.
-
-    Returns:
-        float: Dice coefficient (ranges from 0 to 1).
-    """
-    # Convert the predicted glioma mask and the true glioma mask into a one-dimensional array
-    prediction = prediction.ravel()
-    target = target.ravel()
-
-
-    dice = f1_score(target, prediction, average='binary')
-    return dice
 
 
 

@@ -13,7 +13,7 @@ for ID in sorted(os.listdir(data_dir)):
     print(len(os.listdir(os.path.join(save_dir, ID))))
     print(ID)
     os.makedirs(os.path.join(save_dir, ID), exist_ok=True)
-    for mode in ['Plain', 'Arterial', 'Venous', 'Delay']:
+    for mode in ['NC', 'AP', 'PVP', 'DP']:
         img, spacing, origin, direction = NiiDataRead(os.path.join(data_dir, ID, '{}_img.nii.gz'.format(mode)))
         mask_liver, _, _, _ = NiiDataRead(os.path.join(data_dir, ID, '{}_liver_mask.nii.gz'.format(mode)))
         mask_tumor, _, _, _ = NiiDataRead(os.path.join(data_dir, ID, '{}_Tumor_mask.nii.gz'.format(mode)))
