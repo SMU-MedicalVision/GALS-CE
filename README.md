@@ -1,5 +1,6 @@
-# GALS-CE : AI-based LMs screening model with contrast-enhanced knowledge
+# GALS-CE : AI-based LMs screening model with contrast agent knowledge
 
+This repository contains the code of our paper "Generative AI enables origin identification of liver metastases using non-contrast CT with contrast agents knowledge".
 
 <img src="https://github.com/SMU-MedicalVision/GALS-CE/blob/main/sample_png/Schematic%20illustration.png" width="400px">
 
@@ -21,20 +22,41 @@ pip install -r requirements.txt
 # 2. Prepare the Dataset
 To simplify the dataloading for your own dataset, we provide a default dataset that simply requires the path to the folder with your NifTI images inside, i.e.
 ```
-./RAW_DATA     
-├── ID_001                       
-│        ├── NC.nii.gz             
-│        ├── AP.nii.gz        
-│        ├── PVP.nii.gz       
-│        ├── DP.nii.gz        
-│        ├── (Body_mask.nii.gz)  
-│        ├── (Tumor_mask.nii.gz) 
-│        └── (Liver_mask.nii.gz) 
-├── ID_002
-├── ... 
-└── ID_N 
+./RAW_DATA  
+├──Train
+│    ├── ID_001                       
+│    │        ├── NC.nii.gz             
+│    │        ├── AP.nii.gz        
+│    │        ├── PVP.nii.gz       
+│    │        ├── DP.nii.gz        
+│    │        ├── (Body_mask.nii.gz)  
+│    │        ├── (Tumor_mask.nii.gz) 
+│    │        └── (Liver_mask.nii.gz) 
+│    ├── ID_002
+│    ├── ... 
+│    └── ID_N 
+│
+├──Val
+│    ├── ID_111                       
+│    │        ├── NC.nii.gz             
+│    │        ├── AP.nii.gz        
+│    │        ├── PVP.nii.gz       
+│    │        ├── DP.nii.gz        
+│    │        ├── (Body_mask.nii.gz)  
+│    │        ├── (Tumor_mask.nii.gz) 
+│    │        └── (Liver_mask.nii.gz) 
+│    └── ...
+│
+└──Inference
+     ├── ID_211                       
+     │        ├── NC.nii.gz                   
+     │        └── (Body_mask.nii.gz)  
+     └── ...
 ```
-
+Before training, the data needs to be preprocessed by **'Grayscale Normalization'** by executing the following command.
+```
+python ./main/data/DATA_prepare_cla.py
+```
 
 
 # 3. Training
@@ -45,21 +67,17 @@ python ./main/train_GALS-CE_gen.py --gpu 0 --quick_test
 ```
 **Stage II**: Identification quick test 
 ```
-python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test --gen_save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/  
+python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test
 ```
->{} should be changed to the actual path for saving the synthesis result.  
-
 
 **Inference**(optional): quick test. After the training is completed, the inference will be automatically carried out. If you want to perform the inference separately, please run:
 ```
 python ./main/train_GALS-CE_gen.py --gpu 0 --quick_test --inference_only --save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/
 python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test --inference_only --gen_save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/ --save_dir ./main/trained_models/GALS-CE_cla/{bs*_ImageSize*_epoch*_seed*_time}/
 ```
+>{} should be changed to the actual path for saving the synthesis result.  
 
 - ## Comprehensive Training
-**Pretraining**:
-```
-python ./main/train_GALS-CE_pretrain.py --gpu 0
 ```
 **Stage I**: First, you need to train the generation model. To do so in a prepared dataset, you can run the following command:
 ```
@@ -83,7 +101,7 @@ tensorboard --logdir ./main/trained_models/
 # 4. Inference (optional)
 After the training is completed, the inference will be automatically carried out. If you want to perform the inference separately, please run:
 ```
-python ./main/train_GALS-CE_gen.py --gpu 0 --inference_only --save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/
+python ./main/train_GALS-CE_gen.py --gpu 0 --inference_only --inf_dataset {}  --override --train_model_path_AP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-AP/**.pth} --train_model_path_PVP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-PVP/**.pth} --train_model_path_DP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-DP/**.pth}
 python ./main/train_GALS-CE_cla.py --gpu 0 --inference_only --gen_save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/ --save_dir ./main/trained_models/GALS-CE_cla/{bs*_ImageSize*_epoch*_seed*_time}/
 ```
 
@@ -92,5 +110,5 @@ python ./main/train_GALS-CE_cla.py --gpu 0 --inference_only --gen_save_dir ./mai
 To cite our work, please use
 ```
 (To be updated)
-
 ```
+
