@@ -43,7 +43,7 @@ def Save_Parameter(opt):
             continue
         message += '{:>25}: {:<30}\n'.format(str(k), str(v))
     message += '----------------- End -------------------\n'
-    print(message)
+    # print(message)
 
     # Save as plain text
     with open(join(opt.save_dir, 'train_parameter.txt'), 'wt') as f:

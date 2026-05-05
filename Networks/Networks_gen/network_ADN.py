@@ -239,7 +239,7 @@ class Pre_ADN_10(nn.Module):
         # if isinstance(net, torch.nn.DataParallel):
         #     net = net.module
         if istrain and load_path:
-            print('编码器和解码器loading the model from %s' % load_path)
+            print('Successful loading the model from %s' % load_path)
             state = torch.load(load_path, map_location='cpu')
             pretrained_netG_dict = state['netG_state_dict']
             model_netG_dict = self.pre_ADN.state_dict()
@@ -676,7 +676,7 @@ class NLayer3DDiscriminator_art1(nn.Module):
         self.pre_ADN = CECT_ADN(input_ch=input_ch, base_ch=base_ch, output_ch=output_ch,num_down=num_down, num_up=num_up,n_downsampling=n_downsampling, resolution=resolution)
 
         load_path = load_path_pretrain
-        if load_path != '':
+        if load_path != '' and load_path is not None:
             print('using pretrain_D,loading the model from %s' % load_path)
             # state = torch.load(load_path)
             state = torch.load(load_path, map_location='cpu')
@@ -734,11 +734,9 @@ def init_weights(net, init_type='normal', init_gain=0.02):
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
         elif classname.find('BatchNorm3d') != -1:
-            print('Norm initialized')
             init.normal(m.weight.data, 1.0, init_gain)
             init.constant(m.bias.data, 0.0)
 
-    print('initialize networks with %s' % init_type)
     net.apply(init_func)
 
 class De_Block(nn.Module):
@@ -765,3 +763,34 @@ class Lastconvolution(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+class Enhanced_loss_new(nn.Module):
+
+    def __init__(self, input_ch=1, base_ch=16, output_ch=1,num_down=3, num_up=3,n_downsampling=3, resolution=[],load_path=None,num_residual=4, num_sides="all",shared_decoder=False):
+        super(Enhanced_loss_new, self).__init__()
+
+        self.n = num_down + num_residual + 1 if num_sides == "all" else num_sides
+        self.pre_ADN = CECT_ADN(input_ch=input_ch, base_ch=base_ch, output_ch=output_ch,num_down=num_down, num_up=num_up,n_downsampling=n_downsampling, resolution=resolution)
+        self.criterion = nn.L1Loss()
+
+
+        if load_path != '' and load_path is not None:
+            # state = torch.load(load_path)
+            state = torch.load(load_path, map_location='cpu')
+            pretrained_netG_dict = state['netG_state_dict']
+            model_netG_dict = self.pre_ADN.state_dict()
+            pretrained_netG_dict = {k: v for k, v in pretrained_netG_dict.items() if k in model_netG_dict}
+            model_netG_dict.update(pretrained_netG_dict)
+            self.pre_ADN.load_state_dict(model_netG_dict)  # torch.load: 加载训练好的模型 load_state_dict: 将torch.load加载出来的数据加载到net中
+        self.encoder_art = self.pre_ADN.encoder_art
+        self.weights = [1.0,1.0 / 4,1.0 / 8, 1.0 / 16]
+        for param in self.encoder_art.parameters():
+            param.requires_grad = False
+
+    def forward(self,x,y ):
+
+        _, sides0 = self.encoder_art(x)
+        _,sides1=self.encoder_art(y)
+        loss=0
+        for i in range(len(sides0)):
+            loss += self.weights[i] * self.criterion(sides0[i], sides1[i])
+        return loss
