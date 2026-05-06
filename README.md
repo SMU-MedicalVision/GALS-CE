@@ -50,9 +50,31 @@ To simplify the dataloading for your own dataset, we provide a default dataset t
 └──Inference
      ├── ID_211                       
      │        ├── NC.nii.gz                   
-     │        └── (Body_mask.nii.gz)  
-     └── ...
+     │        ├── (Body_mask.nii.gz)  
+     │        ├── (Tumor_mask.nii.gz) 
+     │        └── (Liver_mask.nii.gz) 
+     └── ... 
+
 ```
+- ### Example
+```./RAW_DATA/metadata.xlsx```
+```{'ICLMs':1, 'RCLMs':2, 'BCLMs':3, 'ECLMs':4, 'PCLMs':5, 'GCLMs':6, 'HCC':7, 'ICC':8}```
+
+| ID       | age  | sex     | label |
+|----------|------|---------|-------|
+| `ID_001` | 40 | `male`  | 1     |
+| `ID_002` | 50 | `fmale` | 2     |
+| `ID_003` | 60 | `male`  | 3     |
+
+```./RAW_DATA/metadata_Inference.xlsx```
+
+| ID       | age  | sex     |
+|----------|------|---------|
+| `ID_211` | 40 | `male`  |
+| `ID_212` | 50 | `fmale` |
+| `ID_213` | 60 | `male`  |
+
+
 Before training, the data needs to be preprocessed by **'Grayscale Normalization'** by executing the following command.
 ```
 python ./main/data/DATA_prepare_cla.py
@@ -72,8 +94,8 @@ python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test
 
 **Inference**(optional): quick test. After the training is completed, the inference will be automatically carried out. If you want to perform the inference separately, please run:
 ```
-python ./main/train_GALS-CE_gen.py --gpu 0 --quick_test --inference_only --save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/
-python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test --inference_only --gen_save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/ --save_dir ./main/trained_models/GALS-CE_cla/{bs*_ImageSize*_epoch*_seed*_time}/
+python ./main/train_GALS-CE_gen.py --gpu 0 --quick_test --inference_only --inf_dataset {}  --override --train_model_path_AP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-AP/**.pth} --train_model_path_PVP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-PVP/**.pth} --train_model_path_DP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-DP/**.pth}
+python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test --inference_only --inf_dataset {} --train_model_pth {trained_models/GALS-CE_cla/train/pretrain_freeze_primary_metastatic/**.pth}/
 ```
 >{} should be changed to the actual path for saving the synthesis result.  
 
@@ -83,10 +105,9 @@ python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test --inference_only --gen_s
 ```
 python ./main/train_GALS-CE_gen.py --gpu 0
 ```
-
 **Stage II**: Second, you need to train the classification model by running the following command. 
 ```
-python ./main/train_GALS-CE_cla.py --gpu 0 --gen_save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/
+python ./main/train_GALS-CE_cla.py --gpu 0
 ```
 >Note that you need to provide the path to the synthesis result to successfully run the command.
 
@@ -103,7 +124,7 @@ tensorboard --logdir ./main/trained_models/
 After the training is completed, the inference will be automatically carried out. If you want to perform the inference separately, please run:
 ```
 python ./main/train_GALS-CE_gen.py --gpu 0 --inference_only --inf_dataset {}  --override --train_model_path_AP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-AP/**.pth} --train_model_path_PVP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-PVP/**.pth} --train_model_path_DP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-DP/**.pth}
-python ./main/train_GALS-CE_cla.py --gpu 0 --inference_only --gen_save_dir ./main/trained_models/GALS-CE_gen/{pred_*_...class_seg_time}/ --save_dir ./main/trained_models/GALS-CE_cla/{bs*_ImageSize*_epoch*_seed*_time}/
+python ./main/train_GALS-CE_cla.py --gpu 0 --inference_only --inf_dataset {} --train_model_pth {trained_models/GALS-CE_cla/train/pretrain_freeze_primary_metastatic/**.pth}/
 ```
 
 # Citation

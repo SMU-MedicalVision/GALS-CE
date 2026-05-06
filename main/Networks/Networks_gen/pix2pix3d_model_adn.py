@@ -2,6 +2,7 @@ import os
 import torch
 from . import network_ADN
 import torch.nn as nn
+from os.path import join
 
 def update_learning_rate(model, max_epochs, epoch, lr_max ):
     """Update learning rates for all the networks; called at the end of every epoch"""
@@ -13,7 +14,7 @@ def update_learning_rate(model, max_epochs, epoch, lr_max ):
 def save_networks(opt, save_name, model, epoch):
 
     save_filename = '%s.pth' % (save_name)
-    save_path = os.path.join(opt.model_results, save_filename)
+    save_path = join(opt.model_results, save_filename)
 
     state = {
         'epoch': epoch + 1,
@@ -40,7 +41,7 @@ def set_requires_grad(nets, requires_grad=False):
 
 def load_networks(opt, model):
     load_filename = '%s.pth' % (opt.load_name)
-    load_path = os.path.join(opt.model_results, load_filename)
+    load_path = join(opt.model_results, load_filename)
 
     print('loading the model from %s' % load_path)
 

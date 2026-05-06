@@ -20,8 +20,8 @@ def pretrain(opt):
     train_start_time = time.time()
     train_set = DatasetFromFolder(opt, dataset='Train')
     val_set = DatasetFromFolder(opt, dataset='Val')
-    train_dataloader = DataLoader(dataset=train_set, num_workers=opt.num_threads, batch_size=opt.batch_size, shuffle=True)
-    val_dataloader = DataLoader(dataset=val_set, num_workers=opt.num_threads, batch_size=opt.val_batch_size, shuffle=False)
+    train_dataloader = DataLoader(dataset=train_set, num_workers=opt.num_threads, batch_size=opt.bs, shuffle=True)
+    val_dataloader = DataLoader(dataset=val_set, num_workers=opt.num_threads, batch_size=opt.val_bs, shuffle=False)
     train_size = len(train_dataloader)
     opt.display_freq = int(train_size/opt.save_img_num)
 
@@ -153,8 +153,8 @@ def main(opt):
     train_set = DatasetFromFolder(opt, dataset='Train')
     val_set = DatasetFromFolder(opt, dataset='Val')
 
-    train_dataloader = DataLoader(dataset=train_set, num_workers=opt.num_threads, batch_size=opt.batch_size, shuffle=True)
-    val_dataloader = DataLoader(dataset=val_set, num_workers=opt.num_threads, batch_size=opt.val_batch_size, shuffle=False)
+    train_dataloader = DataLoader(dataset=train_set, num_workers=opt.num_threads, batch_size=opt.bs, shuffle=True)
+    val_dataloader = DataLoader(dataset=val_set, num_workers=opt.num_threads, batch_size=opt.val_bs, shuffle=False)
 
     train_size = len(train_dataloader)
     val_size = len(val_dataloader)
@@ -348,8 +348,8 @@ if __name__ == '__main__':
     # -------------------- Training settings
     parser.add_argument('--gpu', type=str, default='0', help='which gpu is used')
     parser.add_argument('--max_epochs', type=int, default=50, help='# max_epoch')
-    parser.add_argument('--batch_size', type=int, default=2, help='input batch size')
-    parser.add_argument('--num_threads', type=int, default=2, help='# threads for loading data')
+    parser.add_argument('--bs', type=int, default=2, help='input batch size')
+    parser.add_argument('--num_threads', type=int, default=8, help='# threads for loading data')
     parser.add_argument('--seed', type=int, default=42, help='random seed')
     parser.add_argument('--isTrain', action='store_false', help='isTrain')
     parser.add_argument('--continue_train', default=False, help='continue training: load the latest model')
@@ -401,7 +401,7 @@ if __name__ == '__main__':
     parser.add_argument('--loss_pre_dir', type=str, default='perceive_loss/vgg19-dcbb9e9d.pth', help='resnet18_pretrain_path')
 
     # -------------------- Inference settings
-    parser.add_argument('--val_batch_size', type=int, default=16, help='Val/Test batch size')
+    parser.add_argument('--val_bs', type=int, default=16, help='Val/Test batch size')
     parser.add_argument('--disx', type=int, default=10000, help='frequency of showing training results on console')  # 8000
     parser.add_argument('--save_dir', type=str, default='', help='./main/trained_models/GALS-CE_gen/..')  # Path for saving model parameters
     parser.add_argument('--inf_dataset', type=str, default='Inference', help='./main/RAW_DATA/{inf_dataset}')  # Path for saving model parameters
@@ -427,7 +427,7 @@ if __name__ == '__main__':
         opt_pre.disx = 10
     # -------------- Experiment naming & directory setup --------------
     if not opt_pre.save_dir and not opt_pre.inference_only:
-        save_name = 'bs{}-norm_{}_{}_{}_{}-z{}_x{}_y{}'.format(opt_pre.batch_size, opt_pre.CT_min, opt_pre.CT_mid1,
+        save_name = 'bs{}-norm_{}_{}_{}_{}-z{}_x{}_y{}'.format(opt_pre.bs, opt_pre.CT_min, opt_pre.CT_mid1,
                                                                          opt_pre.CT_mid2, opt_pre.CT_max, opt_pre.depthSize,
                                                                          opt_pre.ImageSize_x, opt_pre.ImageSize_y)
         opt_pre.checkpoints_dir = join(f'./main/trained_models/GALS-CE_gen/pretrain/Swin_ADN_modal-{opt_pre.target_modal}', save_name, current_time)
@@ -480,7 +480,7 @@ if __name__ == '__main__':
         for phase in ['AP', 'PVP', 'DP']:
             opt_train.target_modal = phase
 
-            save_name = 'bs{}-norm_{}_{}_{}_{}-z{}_x{}_y{}'.format(opt_train.batch_size, opt_train.CT_min,
+            save_name = 'bs{}-norm_{}_{}_{}_{}-z{}_x{}_y{}'.format(opt_train.bs, opt_train.CT_min,
                                                                    opt_train.CT_mid1, opt_train.CT_mid2,
                                                                    opt_train.CT_max, opt_train.depthSize,
                                                                    opt_train.ImageSize_x, opt_train.ImageSize_y)
@@ -499,11 +499,7 @@ if __name__ == '__main__':
             model, train_model_path = main(opt_train)
             print('-' * 50, f"\n{phase}_CBSI_gen Training Done\n", '-' * 50)
             model_paths_dict[phase] = train_model_path
-        print('-' * 50, "\nCBSI_gen Inference Start\n", '-' * 50)
-        pred(opt_train, model_paths_dict, model, dataset=opt_train.inf_dataset)
-        print('-' * 50, "\nCBSI_gen Inference Done\n", '-' * 50)
     else:
-        print('-' * 50, "\nCBSI_gen Inference Start\n", '-' * 50)
         model_paths_dict = {}
         if opt_train.train_model_path_AP:
             model_paths_dict['AP'] = opt_train.train_model_path_AP
@@ -515,8 +511,11 @@ if __name__ == '__main__':
             model_paths_dict['DP'] = opt_train.train_model_path_DP
             print(f'DP model path: {opt_train.train_model_path_DP}')
         model = Pix2Pix3DModel(opt_train)
-        pred(opt_train, model_paths_dict, model, dataset=opt_train.inf_dataset)
-        print('-' * 50, "\nCBSI_gen Inference Done\n", '-' * 50)
+
+
+    print('-' * 50, "\nCBSI_gen Inference Start\n", '-' * 50)
+    pred(opt_train, model_paths_dict, model, dataset=opt_train.inf_dataset)
+    print('-' * 50, "\nCBSI_gen Inference Done\n", '-' * 50)
 
 
 

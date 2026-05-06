@@ -1,13 +1,11 @@
 import torch
 from torch import nn
-from Networks import resnet3d
-
-
+from Networks.Networks_cla import resnet3d
 
 
 
 class ResNet18_3D_4stream_clinical_LSTM(nn.Module):
-    def __init__(self, in_channels, n_classes, clinical_inchannels, pretrained=True, no_cuda=False):
+    def __init__(self, in_channels, n_classes, clinical_inchannels, pretrained=False, no_cuda=False):
         super(ResNet18_3D_4stream_clinical_LSTM, self).__init__()
         self.backbone1 = resnet3d.resnet18(in_channels=in_channels, sample_input_W=1, sample_input_H=1, sample_input_D=1, shortcut_type='A',
             no_cuda=no_cuda, num_seg_classes=2)
@@ -87,19 +85,16 @@ class ResNet18_3D_4stream_clinical_LSTM(nn.Module):
         return x
 
 
-class ResNet18_3D_4stream_clinical_LSTM_latefusion_fcn(nn.Module):
-    def __init__(self, in_channels, n_classes, clinical_inchannels, pretrained=True, no_cuda=False, skip=False, pred_class=None):
-        super(ResNet18_3D_4stream_clinical_LSTM_latefusion_fcn, self).__init__()
-
-        self.classifer_p = ResNet18_3D_4stream_clinical_LSTM(in_channels, n_classes[0], clinical_inchannels, pretrained, no_cuda)
-        self.classifer_m = ResNet18_3D_4stream_clinical_LSTM(in_channels, n_classes[1], clinical_inchannels, pretrained, no_cuda)
-
-        self.classifer_p.load_state_dict(torch.load("/home/zky/ALMSS-main/pretrain_weight/primary_tumor.pth"))
-        self.classifer_m.load_state_dict(torch.load("/home/zky/ALMSS-main/pretrain_weight/metastatic_tumor.pth"))
+class ResNet18_3D_4stream_clinical_LSTM_latefusion(nn.Module):
+    def __init__(self, in_channels, n_classes, clinical_inchannels, pretrain_pth=None, no_cuda=False, skip=False, pred_class=None):
+        super(ResNet18_3D_4stream_clinical_LSTM_latefusion, self).__init__()
+        self.classifer_p = ResNet18_3D_4stream_clinical_LSTM(in_channels, n_classes[0], clinical_inchannels, False, no_cuda)
+        self.classifer_m = ResNet18_3D_4stream_clinical_LSTM(in_channels, n_classes[1], clinical_inchannels, False, no_cuda)
+        if pretrain_pth:
+            self.classifer_p.load_state_dict(torch.load(pretrain_pth['primary']))
+            self.classifer_m.load_state_dict(torch.load(pretrain_pth['metastatic']))
 
         self.skip = skip
-        # self.attention = Transformer(dim=512, depth=3, heads=[2, 4, 8], mlp_dim=512)
-        # self.mp = nn.MaxPool1d(8, stride=1)
         self.mp = nn.MaxPool1d(4, stride=1)
         if not pred_class:
             pred_class = n_classes[0]+n_classes[1]-1

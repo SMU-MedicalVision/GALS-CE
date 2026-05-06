@@ -1,22 +1,10 @@
-# from os import listdir
-# import random
-# from sklearn import preprocessing
-# from torchvision import transforms#
-# from PIL import Image
-import torch
-# import torchvision.transforms as transforms
-# import matplotlib.pyplot as plt
-import numpy as np
-# from torch.utils.data import DataLoader
-# from skimage import transform
-# import torchvision.transforms as transforms
-# import pickle
-# from copy import deepcopy
-
 import os
+import torch
+import numpy as np
 from os.path import join
 import torch.utils.data as data
 from Nii_utils import NiiDataRead
+
 
 def normalization_ct(data, min_value, max_value,mid1,mid2,tr1,tr2):
     if type(data) is not np.ndarray:
@@ -24,12 +12,11 @@ def normalization_ct(data, min_value, max_value,mid1,mid2,tr1,tr2):
     nor_data = np.zeros((data.shape[0], data.shape[1], data.shape[2])).astype('float')
     data[data<min_value]= min_value
     data[data> max_value]= max_value
-    # nor_data = (data - min_value) / (max_value - min_value)
-    k1=tr1/(mid1 -min_value) #k=(b-a)/(max-min)   [min_value,mid1]
-    k2 = (tr2-tr1) / (mid2-mid1) # [mid1,mid2]
-    k3=(1-tr2)/(max_value-mid2) #[mid2,max_value]
-    nor_data[data<mid1]= k1*(data[data<mid1]-min_value) #y=a+k(x-min)
-    # nor_data[data<10]=nor
+
+    k1=tr1/(mid1 -min_value)
+    k2 = (tr2-tr1) / (mid2-mid1)
+    k3=(1-tr2)/(max_value-mid2)
+    nor_data[data<mid1]= k1*(data[data<mid1]-min_value)
     nor_data[(data >=mid1)&(data<mid2)] =tr1+ k2 * (data[(data >= mid1)&(data<mid2)] -mid1)
     nor_data[data >= mid2] = tr2 + k3 * (data[data >= mid2] - mid2)
     nor_data=(nor_data-0.5)*2
@@ -43,17 +30,16 @@ def inverser_norm_ct(data,min_value, max_value,mid1,mid2,tr1,tr2):
     else:
         nor_data = torch.zeros_like(data)
 
-    k1=tr1/(mid1 -min_value) #k=(b-a)/(max-min)   [min_value,mid1]
-    k2 = (tr2-tr1) / (mid2-mid1) # [mid1,mid2]
-    k3=(1-tr2)/(max_value-mid2) #[mid2,max_value]
-    nor_data[data < tr1]=data[data < tr1]/k1+min_value #(y-a)/k+min
-    # nor_data[data<10]=nor
+    k1=tr1/(mid1 -min_value)
+    k2 = (tr2-tr1) / (mid2-mid1)
+    k3=(1-tr2)/(max_value-mid2)
+    nor_data[data < tr1]=data[data < tr1]/k1+min_value
     nor_data[(data >= tr1)&(data<tr2)] =(data[(data >= tr1)&(data<tr2)]-tr1)/k2+mid1
     nor_data[data >= tr2] =(data[data >= tr2]-tr2)/k3+mid2
     return nor_data
 
 
-def randomcrop_Npatch_2mask(crop_size, crop_Npatch, mri1, ct, ct_mask, liver_mask, b_ct0=None, dataset='train', this_index=None, crop_valuerange=None):
+def randomcrop_Npatch(crop_size, crop_Npatch, mri1, ct, ct_mask, liver_mask, b_ct0=None, dataset='train', this_index=None, crop_valuerange=None):
     this_frame = crop_size
     img = mri1
     if b_ct0 is None or crop_valuerange is None:
@@ -61,24 +47,18 @@ def randomcrop_Npatch_2mask(crop_size, crop_Npatch, mri1, ct, ct_mask, liver_mas
     else:
         non_zero_z, non_zero_x, non_zero_y = np.where((b_ct0 > crop_valuerange[0]) & (b_ct0 < crop_valuerange[1]))
     non_zero_num = non_zero_x.shape[0]
-    # if non_zero_num < crop_Npatch:
-    #    crop_Npatch = non_zero_num
     if dataset == 'train':
         patch_index = random.sample(range(0, non_zero_num), crop_Npatch)
     else:
-        # patch_index = range(0, non_zero_num)[::int(non_zero_num/(crop_Npatch-1))]
-        # patch_index = range(0, non_zero_num)[::(non_zero_num // (crop_Npatch - 1)-crop_Npatch)]
         patch_index = range(0, non_zero_num)[::(non_zero_num // crop_Npatch)]
         assert len(patch_index) == crop_Npatch or len(patch_index) == crop_Npatch+1, patch_index
         patch_index = [patch_index[this_index % crop_Npatch]]
         crop_Npatch = 1
-        # print('patch_idx', patch_index)
 
     patch_mri1 = np.zeros([crop_Npatch, this_frame[0], this_frame[1], this_frame[2]]).astype(np.float32)
     patch_ct = np.zeros([crop_Npatch, this_frame[0], this_frame[1], this_frame[2]]).astype(np.float32)
     patch_mask = np.zeros([crop_Npatch, this_frame[0], this_frame[1], this_frame[2]]).astype(np.float32)
     patch_liver_mask = np.zeros([crop_Npatch, this_frame[0], this_frame[1], this_frame[2]]).astype(np.float32)
-    # patch_mask = np.zeros([crop_Npatch, this_frame[0], this_frame[1], this_frame[2]]).astype(np.int)
 
     for idx in range(crop_Npatch):
         z_med = non_zero_z[patch_index[idx]]
@@ -142,11 +122,6 @@ class DatasetFromFolder(data.Dataset):
         if opt.quick_test:
             self.image_filenames = self.image_filenames[:2]
 
-        # if opt.debug:
-        #     print('!!!!!!!!!! Attention  Just for debug, only use 4 samples for training and testing.  !!!!!!!!!!!!')
-        #     self.image_filenames = self.image_filenames[:opt.inf_batch_size]
-        #     print('!!!!!!!!!! Attention  Just for debug, only use 4 samples for training and testing.  !!!!!!!!!!!!')
-
         self.crop_size = [opt.depthSize, opt.ImageSize_x, opt.ImageSize_y]
         if self.dataset == 'train':
             self.crop_Npatch = opt.crop_Npatch
@@ -190,16 +165,10 @@ class DatasetFromFolder(data.Dataset):
         b_ct = normalization_ct(b_ct, ct_min, ct_max,CT_mid1,CT_mid2,Norm_tr1,Norm_tr2)
 
         if self.dataset == 'train':
-            # if self.sample_masktype == 'liver_mask':
-            #     A_image, B_image, b_patch_mask = randomcrop_Npatch(self.crop_size, self.ran_num, a_mri1, b_ct, liver_mask, dataset=self.dataset)
-            # else:
-            #     A_image, B_image, b_patch_mask = randomcrop_Npatch(self.crop_size, self.ran_num, a_mri1, b_ct, b_mask, dataset=self.dataset)
-            A_image, B_image, Body_Mask, Liver_Mask = randomcrop_Npatch_2mask(self.crop_size, self.ran_num, a_mri1, b_ct, b_mask, liver_mask, dataset=self.dataset)
+            A_image, B_image, Body_Mask, Liver_Mask = randomcrop_Npatch(self.crop_size, self.ran_num, a_mri1, b_ct, b_mask, liver_mask, dataset=self.dataset)
 
         else:
-            # liver_mask = b_mask
-            # print('name', self.image_filenames[this_index], 'index', index)
-            A_image, B_image, Body_Mask, Liver_Mask = randomcrop_Npatch_2mask(self.crop_size, self.crop_Npatch, a_mri1, b_ct, liver_mask, liver_mask, dataset=self.dataset, this_index=index)
+            A_image, B_image, Body_Mask, Liver_Mask = randomcrop_Npatch(self.crop_size, self.crop_Npatch, a_mri1, b_ct, liver_mask, liver_mask, dataset=self.dataset, this_index=index)
 
         A_image = torch.tensor(A_image).float()
         B_image = torch.tensor(B_image).float()
@@ -212,8 +181,6 @@ class DatasetFromFolder(data.Dataset):
             self.trans = transforms.Compose([
                                       transforms.RandomHorizontalFlip(p1),
                                       transforms.RandomVerticalFlip(p2),
-                                      # transforms.RandomRotation(10, resample=False, expand=False, center=None),
-                                      # transforms.ColorJitter(brightness=0.5, contrast=0.5, hue=0.5),
                                            ])
             A_image = self.trans(A_image)
             B_image = self.trans(B_image)
@@ -224,7 +191,6 @@ class DatasetFromFolder(data.Dataset):
                 'B': B_image,
                 'body_mask': Body_Mask,
                 'liver_mask': Liver_Mask,
-                # 'tumor_mask': Tumor_Mask,
                 'name': self.image_filenames[this_index]}
 
     def __len__(self):
@@ -242,7 +208,7 @@ def test_pred(model, data, MASK, opt, MASK_sample=None):
         z_, y_, x_ = MASK.nonzero()
     else:
         z_, y_, x_ =  (MASK_sample * MASK).nonzero()
-    z_edge = np.where((z_ + patch_deep / 2) > shape[0])  # z
+    z_edge = np.where((z_ + patch_deep / 2) > shape[0])
     z_[z_edge] = shape[0] - patch_deep / 2
     y_edge = np.where((y_ + patch_size / 2) > shape[1])
     y_[y_edge] = shape[1] - patch_size / 2
@@ -293,16 +259,16 @@ def test_pred(model, data, MASK, opt, MASK_sample=None):
         int(xpoint - patch_size / 2):int(xpoint + patch_size / 2)] += 1
         print('Supplement patch:', count, end='   ')
 
-    n_num = len(x_) // opt.val_batch_size
-    n_num = n_num + 0 if len(x_) % opt.val_batch_size == 0 else n_num + 1
+    n_num = len(x_) // opt.val_bs
+    n_num = n_num + 0 if len(x_) % opt.val_bs == 0 else n_num + 1
 
     output = []
     for n in range(n_num):
         print(f'{n + 1}/{n_num}', end=' || ')
         if n == n_num - 1:
-            deep_batch = z_[n * opt.val_batch_size:]
-            height_batch = y_[n * opt.val_batch_size:]
-            width_batch = x_[n * opt.val_batch_size:]
+            deep_batch = z_[n * opt.val_bs:]
+            height_batch = y_[n * opt.val_bs:]
+            width_batch = x_[n * opt.val_bs:]
             data_batch = np.zeros((len(deep_batch), opt.input_nc, patch_deep, patch_size, patch_size))
             for i, deep in enumerate(deep_batch):
                 height = height_batch[i]
@@ -312,9 +278,9 @@ def test_pred(model, data, MASK, opt, MASK_sample=None):
                             int(width - patch_size / 2):int(width + patch_size / 2)]
                 data_batch[i] = sub_image
         else:
-            deep_batch = z_[n * opt.val_batch_size: (n + 1) * opt.val_batch_size]
-            height_batch = y_[n * opt.val_batch_size: (n + 1) * opt.val_batch_size]
-            width_batch = x_[n * opt.val_batch_size: (n + 1) * opt.val_batch_size]
+            deep_batch = z_[n * opt.val_bs: (n + 1) * opt.val_bs]
+            height_batch = y_[n * opt.val_bs: (n + 1) * opt.val_bs]
+            width_batch = x_[n * opt.val_bs: (n + 1) * opt.val_bs]
             data_batch = np.zeros((len(deep_batch), opt.input_nc, patch_deep, patch_size, patch_size))
             for i, deep in enumerate(deep_batch):
                 height = height_batch[i]

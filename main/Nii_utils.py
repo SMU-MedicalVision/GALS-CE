@@ -51,7 +51,10 @@ def Save_Parameter(opt):
         f.write('\n')
 
     # Save as structured JSON
-    vars(opt)['device'] = str(vars(opt)['device'])
+    try:
+        vars(opt)['device'] = str(vars(opt)['device'])
+    except:
+        pass
     with open(join(opt.save_dir, 'train_parameter.json'), 'w') as f:
         json.dump(vars(opt), f, indent=4)
 
