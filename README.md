@@ -17,7 +17,6 @@ conda activate GALS-CE_env
 Subsequently, download and install the required libraries by running:
 ```
 pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 -f https://download.pytorch.org/whl/torch_stable.html
-pip install -r requirements.txt
 ```
 # 2. Prepare the Dataset
 To simplify the dataloading for your own dataset, we provide a default dataset that simply requires the path to the folder with your NifTI images inside, i.e.
