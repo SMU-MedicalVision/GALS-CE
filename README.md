@@ -1,138 +1,243 @@
-# GALS-CE : AI-based LMs screening model with contrast agent knowledge
+# GALS-CE: AI-based LMs Screening Model with Contrast Agent Knowledge
 
-This repository contains the code of our paper "Generative AI enables origin identification of liver metastases using non-contrast CT with contrast agents knowledge".
+This repository contains the official implementation of our paper:
+
+**“Generative AI enables origin identification of liver metastases using non-contrast CT with contrast agents knowledge.”**
 
 <img src="https://github.com/SMU-MedicalVision/GALS-CE/blob/main/sample_png/Schematic%20illustration.png" width="400px">
 
+## 1. Setup Environment
 
-# 1. Setup Environment
-In order to run our model, we suggest you create a virtual environment
-```
+We recommend creating a Conda environment:
+
+```bash
 conda create -n GALS-CE_env python=3.8
-```
-and activate it with
-```
 conda activate GALS-CE_env
 ```
-Subsequently, download and install the required libraries by running:
-```
+
+Install PyTorch and the required dependencies:
+
+```bash
 pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
-# 2. Prepare the Dataset
-Organize your NIfTI images according to the folder structure below. A small ready-to-use demo dataset is also available for quick verification:
-https://www.kaggle.com/datasets/zhengkaiyi/gals-ce-demo-dataset
+
+> **Environment note:** The experiments reported in the manuscript were conducted using PyTorch 2.0.0 on NVIDIA RTX 2080Ti GPUs. During preparation of this repository, the inference pipeline was additionally tested with PyTorch 2.4.1 for compatibility with newer environments. The default requirements reproduce the original experimental environment.
+
+## 2. Quick Start: End-to-End Demo
+
+A ready-to-use demo dataset containing 18 sample cases is available for quick verification:
+
+[Download the GALS-CE Demo Dataset](https://www.kaggle.com/datasets/zhengkaiyi/gals-ce-demo-dataset)
+
+The demo dataset contains both the original NIfTI images and the preprocessed data, allowing users to verify the complete preprocessing, multiphase CECT synthesis, and LMs origin-identification pipeline.
+
+After downloading and extracting the demo dataset, run:
+
+```bash
+bash ./run_GALS_CE_demo.sh
 ```
-./RAW_DATA  
-├──Train
-│    ├── ID_0001                       
-│    │        ├── NC.nii.gz             
-│    │        ├── AP.nii.gz        
-│    │        ├── PVP.nii.gz       
-│    │        ├── DP.nii.gz        
-│    │        ├── (Body_mask.nii.gz)  
-│    │        ├── (Tumor_mask.nii.gz) 
-│    │        └── (Liver_mask.nii.gz) 
-│    ├── ID_0002
-│    ├── ... 
-│    └── ID_0008
+
+The demo script automatically loads the provided configuration files and released checkpoints, and completes the end-to-end inference workflow.
+
+> The demo data are provided solely for executing and verifying the official GALS-CE code. Please refer to `DATA_LICENSE.md` for the applicable data-use restrictions.
+
+---
+
+# Train GALS-CE on Your Own Dataset
+
+The following sections describe how to prepare your own dataset, train GALS-CE, and perform inference using your trained models.
+
+## 3. Prepare the Dataset
+
+Organize the NIfTI images according to the following structure:
+
+```text
+./RAW_DATA
+├── Train
+│   ├── ID_0001
+│   │   ├── NC.nii.gz
+│   │   ├── AP.nii.gz
+│   │   ├── PVP.nii.gz
+│   │   ├── DP.nii.gz
+│   │   ├── Body_mask.nii.gz
+│   │   ├── Tumor_mask.nii.gz
+│   │   └── Liver_mask.nii.gz
+│   ├── ID_0002
+│   ├── ...
+│   └── ID_0008
 │
-├──Val
-│    ├── ID_0009                       
-│    │        ├── NC.nii.gz             
-│    │        ├── AP.nii.gz        
-│    │        ├── PVP.nii.gz       
-│    │        ├── DP.nii.gz        
-│    │        ├── (Body_mask.nii.gz)  
-│    │        ├── (Tumor_mask.nii.gz) 
-│    │        └── (Liver_mask.nii.gz) 
-│    └── ...
-│    └── ID_0016
+├── Val
+│   ├── ID_0009
+│   │   ├── NC.nii.gz
+│   │   ├── AP.nii.gz
+│   │   ├── PVP.nii.gz
+│   │   ├── DP.nii.gz
+│   │   ├── Body_mask.nii.gz
+│   │   ├── Tumor_mask.nii.gz
+│   │   └── Liver_mask.nii.gz
+│   ├── ...
+│   └── ID_0016
 │
-└──Inference
-     ├── ID_0017                     
-     │        ├── NC.nii.gz                   
-     │        ├── (Body_mask.nii.gz)  
-     │        ├── (Tumor_mask.nii.gz) 
-     │        └── (Liver_mask.nii.gz) 
-     └── ID_0018
-
+├── Inference
+│   ├── ID_0017
+│   │   ├── NC.nii.gz
+│   │   ├── Body_mask.nii.gz
+│   │   ├── Tumor_mask.nii.gz
+│   │   └── Liver_mask.nii.gz
+│   └── ID_0018
+│
+├── metadata.xlsx
+└── metadata_Inference.xlsx
 ```
-- ### Example
-```./RAW_DATA/metadata.xlsx```
-```{'ICLMs':1, 'RCLMs':2, 'BCLMs':3, 'ECLMs':4, 'PCLMs':5, 'GCLMs':6, 'HCC':7, 'ICC':8}```
 
-| ID       | age  | sex     | label |
-|----------|------|---------|-------|
-| `ID_001` | 40 | `male`  | 1     |
-| `ID_002` | 50 | `fmale` | 2     |
-| `ID_003` | 60 | `male`  | 3     |
+### 3.1 Training and Validation Metadata
 
-```./RAW_DATA/metadata_Inference.xlsx```
+The class labels of our GALS-CE are defined as follows:
 
-| ID       | age  | sex     |
-|----------|------|---------|
-| `ID_211` | 40 | `male`  |
-| `ID_212` | 50 | `fmale` |
-| `ID_213` | 60 | `male`  |
-
-
-Before training, the data needs to be preprocessed by **'Grayscale Normalization'** by executing the following command.
+```python
+{
+    "ICLMs": 1,
+    "RCLMs": 2,
+    "BCLMs": 3,
+    "ECLMs": 4,
+    "PCLMs": 5,
+    "GCLMs": 6,
+    "HCC": 7,
+    "ICC": 8
+}
 ```
+
+The file `./RAW_DATA/metadata.xlsx` should contain:
+
+| ID | age | sex | label |
+|---|---:|---|---:|
+| `ID_0001` | `<age>` | `male/female` | 1 |
+| `ID_0002` | `<age>` | `male/female` | 2 |
+
+### 3.2 Inference Metadata
+
+The file `./RAW_DATA/metadata_Inference.xlsx` should contain:
+
+| ID | age | sex |
+|---|---:|---|
+| `ID_0017` | `<age>` | `male/female` |
+| `ID_0018` | `<age>` | `male/female` |
+
+### 3.3 Data Preprocessing
+
+Before training, preprocess the images using grayscale normalization:
+
+```bash
 python ./main/data/DATA_prepare_cla.py
 ```
+After preprocessing, the processed data will be saved in `./Processed_DATA`
 
+## 4. Training
 
-# 3. Training
-- ## Quick Test (optional)
-**Stage I**: Synthesis quick test
-```
+### 4.1 Quick Test
+
+The quick-test mode can be used to verify whether the training pipeline is configured correctly.
+
+#### Stage I: Synthesis Quick Test
+
+```bash
 python ./main/train_GALS-CE_gen.py --gpu 0 --quick_test
 ```
-**Stage II**: Identification quick test 
-```
+
+#### Stage II: Identification Quick Test
+
+```bash
 python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test
 ```
 
-**Inference**(optional): quick test. After the training is completed, the inference will be automatically carried out. If you want to perform the inference separately, please run:
-```
-python ./main/train_GALS-CE_gen.py --gpu 0 --quick_test --inference_only --inf_dataset {}  --override --train_model_path_AP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-AP/**.pth} --train_model_path_PVP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-PVP/**.pth} --train_model_path_DP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-DP/**.pth}
-python ./main/train_GALS-CE_cla.py --gpu 0 --quick_test --inference_only --inf_dataset {} --train_model_pth {trained_models/GALS-CE_cla/train/pretrain_freeze_primary_metastatic/**.pth}/
-```
->{} should be changed to the actual path for saving the synthesis result.  
+After training, inference is performed automatically. To run quick-test inference separately:
 
-- ## Comprehensive Training
-
-**Stage I**: First, you need to train the generation model. To do so in a prepared dataset, you can run the following command:
+```bash
+python ./main/train_GALS-CE_gen.py \
+    --gpu 0 \
+    --quick_test \
+    --inference_only \
+    --inf_dataset <INFERENCE_DATA_DIR> \
+    --override \
+    --train_model_path_AP <AP_CHECKPOINT> \
+    --train_model_path_PVP <PVP_CHECKPOINT> \
+    --train_model_path_DP <DP_CHECKPOINT>
 ```
+
+```bash
+python ./main/train_GALS-CE_cla.py \
+    --gpu 0 \
+    --quick_test \
+    --inference_only \
+    --inf_dataset <SYNTHESIS_RESULT_DIR> \
+    --train_model_pth <CLASSIFICATION_CHECKPOINT>
+```
+
+Replace the placeholders with the corresponding data and checkpoint paths.
+
+### 4.2 Comprehensive Training
+
+#### Stage I: Train the CECT Synthesis Model
+
+```bash
 python ./main/train_GALS-CE_gen.py --gpu 0
 ```
-**Stage II**: Second, you need to train the classification model by running the following command. 
-```
+
+#### Stage II: Train the LMs Identification Model
+
+```bash
 python ./main/train_GALS-CE_cla.py --gpu 0
 ```
->Note that you need to provide the path to the synthesis result to successfully run the command.
 
+The synthesized multiphase CECT results generated in Stage I should be provided as input for Stage II.
 
-- ## Visualize the Training Process (optional)
-You can use the following command to observe the loss curve of the training process, visualize the sample image, etc.
-```
+### 4.3 Visualize the Training Process
+
+TensorBoard can be used to visualize training losses and generated samples:
+
+```bash
 tensorboard --logdir ./main/trained_models/
 ```
 
+## 5. Inference
 
-[Supplement] Problem troubleshooting can be found in Error_troubleshooting.txt
-# 4. Inference (optional)
-After the training is completed, the inference will be automatically carried out. If you want to perform the inference separately, please run:
-```
-python ./main/train_GALS-CE_gen.py --gpu 0 --inference_only --inf_dataset {}  --override --train_model_path_AP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-AP/**.pth} --train_model_path_PVP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-PVP/**.pth} --train_model_path_DP {./main/trained_models/GALS-CE_gen/train/Pre_Swin_ADN_trainD_modal-DP/**.pth}
-python ./main/train_GALS-CE_cla.py --gpu 0 --inference_only --inf_dataset {} --train_model_pth {trained_models/GALS-CE_cla/train/pretrain_freeze_primary_metastatic/**.pth}/
+After training, inference is performed automatically. To perform inference separately, run the following commands.
+
+### 5.1 Multiphase CECT Synthesis
+
+```bash
+python ./main/train_GALS-CE_gen.py \
+    --gpu 0 \
+    --inference_only \
+    --inf_dataset <INFERENCE_DATA_DIR> \
+    --override \
+    --train_model_path_AP <AP_CHECKPOINT> \
+    --train_model_path_PVP <PVP_CHECKPOINT> \
+    --train_model_path_DP <DP_CHECKPOINT>
 ```
 
-# Citation
+### 5.2 LMs Origin Identification
 
-To cite our work, please use
-```
-(To be updated)
+```bash
+python ./main/train_GALS-CE_cla.py \
+    --gpu 0 \
+    --inference_only \
+    --inf_dataset <SYNTHESIS_RESULT_DIR> \
+    --train_model_pth <CLASSIFICATION_CHECKPOINT>
 ```
 
+Here:
+
+- `<INFERENCE_DATA_DIR>` is the directory containing the preprocessed NCCT inference data.
+- `<SYNTHESIS_RESULT_DIR>` is the directory containing the synthetic AP, PVP, and DP images generated in Stage I.
+- `<AP_CHECKPOINT>`, `<PVP_CHECKPOINT>`, and `<DP_CHECKPOINT>` are the checkpoints for the three synthesis models.
+- `<CLASSIFICATION_CHECKPOINT>` is the checkpoint for the identification model.
+
+## 6. Troubleshooting
+
+Common installation and execution problems are documented in:
+
+```text
+Error_troubleshooting.txt
+```
