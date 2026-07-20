@@ -15,6 +15,14 @@ conda create -n GALS-CE_env python=3.8
 conda activate GALS-CE_env
 ```
 
+Download and extract the repository, and then enter the project directory:
+
+```bash
+cd <root>/GALS-CE
+```
+
+Here, `<root>` denotes the directory where the repository is stored.
+
 Install PyTorch and the required dependencies:
 
 ```bash
@@ -26,11 +34,21 @@ pip install -r requirements.txt
 
 ## 2. Quick Start: End-to-End Demo
 
+### 2.1 Download the Dataset
 A ready-to-use demo dataset containing 18 sample cases is available for quick verification:
 
 [Download the GALS-CE Demo Dataset](https://www.kaggle.com/datasets/zhengkaiyi/gals-ce-demo-dataset)
 
 The demo dataset contains both the original NIfTI images and the preprocessed data, allowing users to verify the complete preprocessing, multiphase CECT synthesis, and LMs origin-identification pipeline.
+
+### 2.2 Download and Extract the Code
+
+Download and extract the GALS-CE repository, and then enter the project directory:
+
+```bash
+cd <root>/GALS-CE
+```
+### 2.3 Run the End-to-End Demo
 
 After downloading and extracting the demo dataset, run:
 
@@ -38,9 +56,14 @@ After downloading and extracting the demo dataset, run:
 bash ./run_GALS_CE_demo.sh
 ```
 
-The demo script automatically loads the provided configuration files and released checkpoints, and completes the end-to-end inference workflow.
+On a single NVIDIA RTX 2080Ti GPU, the script completes the entire GALS-CE quick-test workflow, including synthesis training and inference followed by identification training and inference, in approximately five minutes.
 
-> The demo data are provided solely for executing and verifying the official GALS-CE code. Please refer to `DATA_LICENSE.md` for the applicable data-use restrictions.
+The generated multiphase CECT images are saved in: `./RAW_DATA/Inference_GALS-CE_syn/`
+
+The identification results are saved in:`./Processed_DATA/GALS-CE_cla_pred_Inference.xlsx`
+
+The `--quick_test` option is used for rapid pipeline verification. Remove `--quick_test` from both commands in `run_GALS_CE_demo.sh` to perform standard training.
+
 
 ---
 

@@ -125,6 +125,8 @@ def Preprocess(phase_data_save_dict):
         os.makedirs(join(phase_data_save_dict[modal][1]), exist_ok=True)
         NiiDataWrite(join(phase_data_save_dict[modal][1], f'{modal}_liver.nii.gz'), img_liver, spacing, origin, direction)
         NiiDataWrite(join(phase_data_save_dict[modal][1], f'{modal}_tumor.nii.gz'), img_tumor, spacing, origin, direction)
+    print(join(phase_data_save_dict[modal][1], f'{modal}_liver.nii.gz'))
+    print(join(phase_data_save_dict[modal][1], f'{modal}_tumor.nii.gz'))
 
 
 def main(opt, pretrain=False, label_type='primary_metastatic'):
@@ -320,7 +322,7 @@ def pred(opt, net):
 
             NC_processed_path = join(opt.data_dir, opt.inf_dataset, ID)
             syn_processed_path = join(opt.data_dir, f'{opt.inf_dataset}_GALS-CE_syn', ID)
-            if not os.path.exists(NC_processed_path) or os.path.exists(syn_processed_path):
+            if (not os.path.exists(NC_processed_path)) or (not os.path.exists(syn_processed_path)):
                 phase_data_save_dict = {'NC': [join(opt.raw_dir, opt.inf_dataset, ID), NC_processed_path],
                                         'mask':join(opt.raw_dir, opt.inf_dataset, ID),
                                         'AP':[join(opt.raw_dir, f'{opt.inf_dataset}_GALS-CE_syn', ID), syn_processed_path],
@@ -328,7 +330,8 @@ def pred(opt, net):
                                         'DP':[join(opt.raw_dir, f'{opt.inf_dataset}_GALS-CE_syn', ID), syn_processed_path]}
                 Preprocess(phase_data_save_dict)
                 assert os.path.exists(NC_processed_path) and os.path.exists(syn_processed_path), 'Preprocess error, check the preprocess function'
-
+            else:
+                print('procress skip')
 
 
             NC_liver = NiiDataRead(join(NC_processed_path, 'NC_liver.nii.gz'), image_only=True)
@@ -368,7 +371,7 @@ def pred(opt, net):
         })
 
         df.to_excel(join(opt.data_dir, f'GALS-CE_cla_pred_{opt.inf_dataset}.xlsx'), index=False)
-
+    print('Inference results save to:', join(opt.data_dir, f'GALS-CE_cla_pred_{opt.inf_dataset}.xlsx'))
 
 
 if __name__ == '__main__':
@@ -379,7 +382,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=str, default='1', help='which gpu is used')
     parser.add_argument('--bs', type=int, default=8, help='batch size')
     parser.add_argument('--num_threads', type=int, default=8, help='# threads for loading data')
-    parser.add_argument('--epoch', type=int, default=50, help='all_epochs')
+    parser.add_argument('--max_epoch', type=int, default=50, help='all_epochs')
     parser.add_argument('--seed', type=int, default=42, help='random seed')
     parser.add_argument('--flood', type=float, default=0.2, help='random seed')
     parser.add_argument('--lr_max', type=float, default=0.0002, help='random seed')
@@ -412,33 +415,35 @@ if __name__ == '__main__':
         opt.checkpoints_dir = './main/trained_models/GALS-CE_cla/pretrain/primary/bs{}_epoch{}_seed{}_{}'.format(opt.bs, opt.max_epoch, opt.seed, current_time)
         opt.save_dir = opt.checkpoints_dir
         pathlib.Path(opt.checkpoints_dir).mkdir(parents=True, exist_ok=True)
-        print('-' * 50, "\nCBSI_cla (primary) Pretraining Start\n", '-' * 50)
+        # print('-' * 50, "\nCBSI_cla (primary) Pretraining Start\n", '-' * 50)
         opt.num_class=3
+        print('-' * 50, "\nCBSI_cla (primary) Pretraining Start\n")
         _, pretrain_model_pth = main(opt, pretrain=True, label_type='primary')
         opt.primary_model_pth = pretrain_model_pth
-        print('-' * 50, "\nCBSI_cla (primary) Pretraining Done\n", '-' * 50)
+        print("\nCBSI_cla (primary) Pretraining Done\n", '-' * 50)
 
         opt.checkpoints_dir = './main/trained_models/GALS-CE_cla/pretrain/metastatic/bs{}_epoch{}_seed{}_{}'.format(opt.bs, opt.max_epoch, opt.seed, current_time)
         opt.save_dir = opt.checkpoints_dir
         pathlib.Path(opt.checkpoints_dir).mkdir(parents=True, exist_ok=True)
-        print('-' * 50, "\nCBSI_cla (metastatic) Pretraining Start\n", '-' * 50)
+        # print('-' * 50, "\nCBSI_cla (metastatic) Pretraining Start\n", '-' * 50)
         opt.num_class=6
+        print("\nCBSI_cla (metastatic) Pretraining Start\n")
         _, pretrain_model_pth = main(opt, pretrain=True, label_type='metastatic')
         opt.metastatic_model_pth = pretrain_model_pth
-        print('-' * 50, "\nCBSI_cla (metastatic) Pretraining Done\n", '-' * 50)
+        print("\nCBSI_cla (metastatic) Pretraining Done\n", '-' * 50)
 
     if not opt.inference_only:
         opt.num_class = 8
         opt.checkpoints_dir = './main/trained_models/GALS-CE_cla/train/pretrain_freeze_primary_metastatic/bs{}_epoch{}_seed{}_{}'.format(opt.bs, opt.max_epoch, opt.seed, current_time)
         opt.save_dir = opt.checkpoints_dir
         pathlib.Path(opt.checkpoints_dir).mkdir(parents=True, exist_ok=True)
-        print('-' * 50, "\nCBSI_cla (primary_metastatic) Training Start\n", '-' * 50)
+        # print('-' * 50, "\nCBSI_cla (primary_metastatic) Training Start\n", '-' * 50)
         net, train_model_pth = main(opt, pretrain=False, label_type='primary_metastatic')
         print('-' * 50, "\nCBSI_cla (primary_metastatic) Training Done\n", '-' * 50)
         opt.train_model_pth = train_model_pth
     else:
         net = ResNet18_3D_4stream_clinical_LSTM_latefusion(in_channels=2, clinical_inchannels=3, n_classes=[3, 6], no_cuda=False).cuda()
 
-    print('-' * 50, "\nCBSI_cla Inference Start\n", '-' * 50)
+    # print('-' * 50, "\nCBSI_cla Inference Start\n", '-' * 50)
     pred(opt, net)
     print('-' * 50, "\nCBSI_cla Inference Done\n", '-' * 50)

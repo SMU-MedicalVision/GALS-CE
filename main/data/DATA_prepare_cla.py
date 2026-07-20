@@ -73,7 +73,6 @@ if __name__ == '__main__':
                 mask_liver, _, _, _ = NiiDataRead(join(data_root, dataset, ID, 'Liver_mask.nii.gz'))
                 mask_tumor, _, _, _ = NiiDataRead(join(data_root, dataset, ID, 'Tumor_mask.nii.gz'))
 
-                # 提取非零区域
                 z_, x_, y_ = mask_liver.nonzero()
                 z1 = z_.min()
                 z2 = z_.max()

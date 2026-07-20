@@ -339,7 +339,7 @@ def pred(opt, model_paths_dict, model, dataset='Inference', override=False):
                 os.makedirs(join(opt.image_dir, f'{dataset}_GALS-CE_syn', ID), exist_ok=True)
                 NiiDataWrite(join(opt.image_dir, f'{dataset}_GALS-CE_syn', ID, f'{phase}.nii.gz'), pred_image, spacing, origin, direction)
                 print(f'{dataset} {ID} {phase} done! :', join(opt.image_dir, f'{dataset}_GALS-CE_syn', ID, f'{phase}.nii.gz'))
-
+    print(f'Inference synthetic images save to:', join(opt.image_dir, f'{dataset}_GALS-CE_syn'))
 
 if __name__ == '__main__':
     current_time = datetime.now().strftime('%b%d_%H-%M-%S')
@@ -437,9 +437,10 @@ if __name__ == '__main__':
         pathlib.Path(opt_pre.model_results).mkdir(parents=True, exist_ok=True)
 
     if not opt_pre.inference_only:
-        print('-' * 50, "\nCBSI_gen Pretraining Start\n", '-' * 50)
+        print('-' * 30, "\nCBSI_gen Pretraining Start\n")
         pretrain_model_path = pretrain(opt_pre)
-        print('-' * 50, "\nCBSI_gen Pretraining Done\n", '-' * 50)
+        print(pretrain_model_path)
+        print("\nCBSI_gen Pretraining Done\n")
 
 
     # ----------------------------------
@@ -475,7 +476,7 @@ if __name__ == '__main__':
 
     if not opt_train.save_dir and not opt_train.inference_only:
         opt_train.load_path_pretrain = pretrain_model_path
-        print('-' * 50, "\nCBSI_gen Training Start\n", '-' * 50)
+        print('-' * 30, "\nCBSI_gen Training Start\n")
         model_paths_dict = {}
         for phase in ['AP', 'PVP', 'DP']:
             opt_train.target_modal = phase
@@ -497,7 +498,7 @@ if __name__ == '__main__':
             pathlib.Path(opt_train.val_results).mkdir(parents=True, exist_ok=True)
 
             model, train_model_path = main(opt_train)
-            print('-' * 50, f"\n{phase}_CBSI_gen Training Done\n", '-' * 50)
+            print(f"\n{phase}_CBSI_gen Training Done\n", '-' * 30)
             model_paths_dict[phase] = train_model_path
     else:
         model_paths_dict = {}
@@ -513,9 +514,9 @@ if __name__ == '__main__':
         model = Pix2Pix3DModel(opt_train)
 
 
-    print('-' * 50, "\nCBSI_gen Inference Start\n", '-' * 50)
+    print("\nCBSI_gen Inference Start\n")
     pred(opt_train, model_paths_dict, model, dataset=opt_train.inf_dataset)
-    print('-' * 50, "\nCBSI_gen Inference Done\n", '-' * 50)
+    print("\nCBSI_gen Inference Done\n", '-' * 30)
 
 
 
