@@ -16,7 +16,7 @@ conda activate GALS-CE_env
 ```
 Subsequently, download and install the required libraries by running:
 ```
-pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu118
+pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
 # 2. Prepare the Dataset
