@@ -20,11 +20,12 @@ pip install torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https
 pip install -r requirements.txt
 ```
 # 2. Prepare the Dataset
-To simplify the dataloading for your own dataset, we provide a default dataset that simply requires the path to the folder with your NifTI images inside, i.e.
+Organize your NIfTI images according to the folder structure below. A small ready-to-use demo dataset is also available for quick verification:
+https://www.kaggle.com/datasets/zhengkaiyi/gals-ce-demo-dataset
 ```
 ./RAW_DATA  
 ├──Train
-│    ├── ID_001                       
+│    ├── ID_0001                       
 │    │        ├── NC.nii.gz             
 │    │        ├── AP.nii.gz        
 │    │        ├── PVP.nii.gz       
@@ -32,12 +33,12 @@ To simplify the dataloading for your own dataset, we provide a default dataset t
 │    │        ├── (Body_mask.nii.gz)  
 │    │        ├── (Tumor_mask.nii.gz) 
 │    │        └── (Liver_mask.nii.gz) 
-│    ├── ID_002
+│    ├── ID_0002
 │    ├── ... 
-│    └── ID_N 
+│    └── ID_0008
 │
 ├──Val
-│    ├── ID_111                       
+│    ├── ID_0009                       
 │    │        ├── NC.nii.gz             
 │    │        ├── AP.nii.gz        
 │    │        ├── PVP.nii.gz       
@@ -46,14 +47,15 @@ To simplify the dataloading for your own dataset, we provide a default dataset t
 │    │        ├── (Tumor_mask.nii.gz) 
 │    │        └── (Liver_mask.nii.gz) 
 │    └── ...
+│    └── ID_0016
 │
 └──Inference
-     ├── ID_211                       
+     ├── ID_0017                     
      │        ├── NC.nii.gz                   
      │        ├── (Body_mask.nii.gz)  
      │        ├── (Tumor_mask.nii.gz) 
      │        └── (Liver_mask.nii.gz) 
-     └── ... 
+     └── ID_0018
 
 ```
 - ### Example
